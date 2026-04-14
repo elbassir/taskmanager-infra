@@ -1,0 +1,65 @@
+# ============================================================
+# values.yaml — Configuration par défaut du chart TaskManager
+# Surcharger avec : helm install ... -f values-prod.yaml
+# ============================================================
+
+replicaCount: 2
+environment: prod
+
+image:
+  repository: ghcr.io/your-org/taskmanager
+  pullPolicy: Always
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: alb
+  host: taskmanager.pfe-devops.fr
+  tls: true
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 45
+    periodSeconds: 15
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
+config:
+  springProfiles: prod
+  logLevel: INFO
+
+db:
+  secretName: taskmanager-db-secret
+
+monitoring:
+  prometheus:
+    enabled: true
+    path: /actuator/prometheus
+    port: 8080

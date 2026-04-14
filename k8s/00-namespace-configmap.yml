@@ -1,0 +1,30 @@
+# ============================================================
+# Namespace — TaskManager
+# ============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taskmanager
+  labels:
+    app: taskmanager
+    environment: prod
+
+---
+# ============================================================
+# ConfigMap — Configuration non-sensible de l'application
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskmanager-config
+  namespace: taskmanager
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"
+  JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+  # Logging
+  LOGGING_LEVEL_COM_PFE: "INFO"
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: "WARN"
+  # Actuator
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics,prometheus"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"

@@ -1,0 +1,26 @@
+# ============================================================
+# terraform.tfvars.example
+# Copier en terraform.tfvars et renseigner les valeurs
+# NE JAMAIS commiter terraform.tfvars dans Git !
+# ============================================================
+
+aws_region  = "eu-west-3"
+environment = "prod"
+
+# Réseau
+vpc_cidr             = "10.0.0.0/16"
+public_subnets_cidr  = ["10.0.0.0/20", "10.0.128.0/20"]
+private_subnets_cidr = ["10.0.16.0/20", "10.0.144.0/20"]
+
+# EKS
+eks_version       = "1.28"
+node_desired_size = 2
+node_max_size     = 4
+node_min_size     = 1
+
+# RDS
+rds_instance_class = "db.t3.micro"
+db_password        = "CHANGE_ME_secure_password_123!"  # Min 12 caractères
+
+# Application
+app_image_tag = "latest"

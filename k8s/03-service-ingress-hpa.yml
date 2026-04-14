@@ -1,0 +1,94 @@
+# ============================================================
+# Service — Exposition interne du déploiement
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskmanager-svc
+  namespace: taskmanager
+  labels:
+    app: taskmanager
+spec:
+  selector:
+    app: taskmanager
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+
+---
+# ============================================================
+# Ingress — Point d'entrée HTTP/HTTPS (AWS ALB Ingress Controller)
+# Prérequis : aws-load-balancer-controller installé sur le cluster
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskmanager-ingress
+  namespace: taskmanager
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  rules:
+    - host: taskmanager.pfe-devops.fr    # ← Remplacer par votre domaine
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: taskmanager-svc
+                port:
+                  number: 80
+
+---
+# ============================================================
+# HorizontalPodAutoscaler — Auto-scaling basé sur CPU & RAM
+# ============================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: taskmanager-hpa
+  namespace: taskmanager
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: taskmanager
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type:               Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type:               Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300   # 5 min avant de scale down
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120

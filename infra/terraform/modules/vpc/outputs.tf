@@ -1,0 +1,10 @@
+output "vpc_id"               { value = aws_vpc.main.id }
+output "vpc_cidr"             { value = aws_vpc.main.cidr_block }
+output "public_subnets_ids"   { value = aws_subnet.public[*].id }
+output "private_subnets_ids"  { value = aws_subnet.private[*].id }
+output "rds_subnet_group_name"{ value = aws_db_subnet_group.rds.name }
+output "internet_gateway_id"  { value = aws_internet_gateway.igw.id }
+output "nat_gateways_ids"     { value = aws_nat_gateway.nat[*].id }
+output "elastic_ips"          { value = aws_eip.nat[*].public_ip }
+output "public_route_table_id"{ value = aws_route_table.public.id }
+output "private_route_table_ids" { value = aws_route_table.private[*].id }
