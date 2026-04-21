@@ -1,9 +1,16 @@
-variable "aws_region" { type = string; default = "eu-west-3" }
-variable "resource_name_prefix" { type = string; default = "taskmanager-" }
-variable "create_replica" { type = bool; default = false }
-
+variable "aws_region" {
+  type    = string
+  default = "eu-west-3"
+}
+variable "resource_name_prefix" {
+  type    = string
+  default = "taskmanager-"
+}
+variable "create_replica" {
+  type    = bool
+  default = false
+}
 variable "database_configurations" {
-  description = "Configurations des instances RDS PostgreSQL"
   type = list(object({
     identifier              = string
     engine                  = string
@@ -27,7 +34,6 @@ variable "database_configurations" {
   }))
   default = []
 }
-
 variable "replica_configurations" {
   type = list(object({
     identifier              = string

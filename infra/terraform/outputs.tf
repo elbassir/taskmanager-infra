@@ -63,7 +63,7 @@ output "configure_kubectl" {
 # ---- RDS PostgreSQL ----
 output "rds_master_endpoint" {
   description = "Endpoint de la base de données principale"
-  value       = module.rds_taskdb.master_db_endpoint
+  value       = module.rds_taskdb.master_db_endpoint["0"]
   sensitive   = true
 }
 

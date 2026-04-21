@@ -7,9 +7,9 @@ replicaCount: 2
 environment: prod
 
 image:
-  repository: ghcr.io/your-org/taskmanager
+  repository: ghcr.io/elbassir/taskmanager
   pullPolicy: Always
-  tag: "latest"
+  tag: 'latest'
 
 service:
   type: ClusterIP
@@ -19,20 +19,24 @@ service:
 ingress:
   enabled: true
   className: alb
-  host: taskmanager.pfe-devops.fr
-  tls: true
+  host: '' # ← vide = pas de restriction de domaine
+  tls: false # ← désactiver TLS/HTTPS
   annotations:
+    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # Supprimer ssl-redirect et listen-ports HTTPS
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/success-codes: '200'
 
 resources:
   requests:
-    memory: "256Mi"
-    cpu: "250m"
+    memory: '256Mi'
+    cpu: '250m'
   limits:
-    memory: "512Mi"
-    cpu: "500m"
+    memory: '512Mi'
+    cpu: '500m'
 
 autoscaling:
   enabled: true

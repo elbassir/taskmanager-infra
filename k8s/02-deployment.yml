@@ -8,9 +8,9 @@ metadata:
   namespace: taskmanager
   labels:
     app: taskmanager
-    version: "1.0.0"
+    version: '1.0.0'
   annotations:
-    deployment.kubernetes.io/revision: "1"
+    deployment.kubernetes.io/revision: '1'
 spec:
   replicas: 2
   selector:
@@ -20,16 +20,16 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 1
-      maxUnavailable: 0       # Zero-downtime deployment
+      maxUnavailable: 0 # Zero-downtime deployment
   template:
     metadata:
       labels:
         app: taskmanager
-        version: "1.0.0"
+        version: '1.0.0'
       annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path:   "/actuator/prometheus"
-        prometheus.io/port:   "8080"
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/actuator/prometheus'
+        prometheus.io/port: '8080'
     spec:
       # Anti-affinity : les pods ne se retrouvent pas sur le même nœud
       affinity:
@@ -46,7 +46,7 @@ spec:
 
       containers:
         - name: taskmanager
-          image: ghcr.io/your-org/taskmanager:latest    # ← Remplacer par votre image
+          image: ghcr.io/elbassir/taskmanager:latest # ← Remplacer par votre image
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -78,11 +78,11 @@ spec:
 
           resources:
             requests:
-              memory: "256Mi"
-              cpu:    "250m"
+              memory: '256Mi'
+              cpu: '250m'
             limits:
-              memory: "512Mi"
-              cpu:    "500m"
+              memory: '512Mi'
+              cpu: '500m'
 
           # Liveness : le conteneur est-il en vie ?
           livenessProbe:

@@ -8,6 +8,12 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     release: {{ .Release.Name }}
 spec:
+  {{- if .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- range .Values.imagePullSecrets }}
+    - name: {{ .name }}
+    {{- end }}
+  {{- end }}
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:

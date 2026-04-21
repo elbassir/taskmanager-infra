@@ -8,7 +8,6 @@ set -euo pipefail
 AWS_REGION="eu-west-3"
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 BUCKET_NAME="taskmanager-tfstate-${ACCOUNT_ID}"
-DYNAMO_TABLE="taskmanager-tflock"
 
 echo "🏗️  Initialisation du backend Terraform"
 echo "   Région  : $AWS_REGION"
@@ -19,7 +18,8 @@ echo "   Bucket  : $BUCKET_NAME"
 echo "📦 Création du bucket S3..."
 aws s3 mb "s3://${BUCKET_NAME}" --region "$AWS_REGION" 2>/dev/null || echo "   (bucket existant)"
 
-# Activer le versioning
+# Activer le versioning (requis pour use_lockfile = true)
+echo "🔒 Activation du versioning S3 (requis pour le lock natif)..."
 aws s3api put-bucket-versioning \
   --bucket "$BUCKET_NAME" \
   --versioning-configuration Status=Enabled
@@ -31,21 +31,27 @@ aws s3api put-bucket-encryption \
     "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
   }'
 
-# Créer la table DynamoDB pour le lock
-echo "🔒 Création de la table DynamoDB pour le lock..."
-aws dynamodb create-table \
-  --table-name "$DYNAMO_TABLE" \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region "$AWS_REGION" 2>/dev/null || echo "   (table existante)"
+# Bloquer l'accès public au bucket
+aws s3api put-public-access-block \
+  --bucket "$BUCKET_NAME" \
+  --public-access-block-configuration \
+    "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 
 # Mettre à jour le backend.tf avec le nom du bucket réel
-sed -i "s/taskmanager-tfstate\"/taskmanager-tfstate-${ACCOUNT_ID}\"/" infra/terraform/backend.tf
+# Compatible macOS et Linux
+echo "📝 Mise à jour de backend.tf..."
+BACKEND_FILE="../infra/terraform/backend.tf"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' "s|bucket.*=.*\"taskmanager-tfstate-[^\"]*\"|bucket       = \"${BUCKET_NAME}\"|" "$BACKEND_FILE"
+else
+  sed -i "s|bucket.*=.*\"taskmanager-tfstate-[^\"]*\"|bucket       = \"${BUCKET_NAME}\"|" "$BACKEND_FILE"
+fi
 
+echo ""
 echo "✅ Backend Terraform prêt !"
+echo "   Lock : fichier natif S3 (.tflock) — aucune table DynamoDB nécessaire"
 echo ""
 echo "Prochaines étapes :"
-echo "  1. cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars"
+echo "  1. cp ../infra/terraform/terraform.tfvars.example ../infra/terraform/terraform.tfvars"
 echo "  2. Éditer terraform.tfvars avec vos valeurs"
-echo "  3. cd infra/terraform && terraform init && terraform plan"
+echo "  3. cd ../infra/terraform && terraform init && terraform plan"

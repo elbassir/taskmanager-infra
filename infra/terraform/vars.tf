@@ -50,7 +50,7 @@ variable "private_subnets_cidr" {
 variable "eks_version" {
   description = "Version de Kubernetes pour le cluster EKS"
   type        = string
-  default     = "1.28"
+  default     = "1.30"
 }
 
 variable "node_desired_size" {
@@ -96,4 +96,15 @@ variable "app_image_tag" {
   description = "Tag de l'image Docker de l'application à déployer"
   type        = string
   default     = "latest"
+}
+
+variable "ghcr_username" {
+  description = "Nom d'utilisateur GitHub pour GHCR"
+  type        = string
+}
+
+variable "ghcr_token" {
+  description = "Personal Access Token GitHub (scope: read:packages)"
+  type        = string
+  sensitive   = true
 }
