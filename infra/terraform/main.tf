@@ -246,31 +246,6 @@ resource "kubernetes_secret" "ghcr_secret" {
 }
 
 # ---- Helm Release — Application TaskManager ----
-resource "helm_release" "taskmanager" {
-  name      = "taskmanager"
-  chart     = "../../helm/taskmanager"
-  namespace = kubernetes_namespace.taskmanager.metadata[0].name
-
-  timeout = 600
-  wait    = true
-
-  set {
-    name  = "image.repository"
-    value = "ghcr.io/${var.ghcr_username}/taskmanager"
-  }
-  set {
-    name  = "image.tag"
-    value = var.app_image_tag
-  }
-  set {
-    name  = "imagePullSecrets[0].name"
-    value = "ghcr-secret"
-  }
-
-  depends_on = [
-    helm_release.alb_controller, # ALB Controller doit être prêt avant l'app
-    kubernetes_secret.taskmanager_db,
-    kubernetes_secret.ghcr_secret,
-    module.eks_nodegroup
-  ]
-}
+# Le déploiement de l'application est géré par le job "deploy" du CI/CD
+# (helm upgrade --install) et non par Terraform.
+# Terraform gère uniquement l'infrastructure (VPC, EKS, RDS, ALB Controller).
