@@ -338,6 +338,38 @@ resource "helm_release" "prometheus" {
   depends_on = [module.eks_nodegroup]
 }
 
+# ---- PodMonitor — Scraping Prometheus des pods TaskManager ----
+resource "kubernetes_manifest" "taskmanager_podmonitor" {
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "PodMonitor"
+    metadata = {
+      name      = "taskmanager"
+      namespace = "monitoring"
+      labels = {
+        release = "prometheus"
+      }
+    }
+    spec = {
+      namespaceSelector = {
+        matchNames = ["taskmanager"]
+      }
+      selector = {
+        matchLabels = {
+          app = "taskmanager"
+        }
+      }
+      podMetricsEndpoints = [{
+        port     = "http"
+        path     = "/actuator/prometheus"
+        interval = "30s"
+      }]
+    }
+  }
+
+  depends_on = [helm_release.prometheus, kubernetes_namespace.taskmanager]
+}
+
 # ---- Application TaskManager ----
 # Le déploiement de l'application est géré par le job "deploy" du CI/CD
 # (helm upgrade --install) et non par Terraform.
