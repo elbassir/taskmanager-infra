@@ -245,7 +245,57 @@ resource "kubernetes_secret" "ghcr_secret" {
   type = "kubernetes.io/dockerconfigjson"
 }
 
-# ---- Helm Release — Application TaskManager ----
+# ============================================================
+# MONITORING — Prometheus + Grafana (kube-prometheus-stack)
+# ============================================================
+
+resource "kubernetes_namespace" "monitoring" {
+  metadata {
+    name = "monitoring"
+  }
+  depends_on = [module.eks_nodegroup]
+}
+
+resource "helm_release" "prometheus" {
+  name       = "prometheus"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = "58.2.1"
+  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+
+  timeout = 600
+  wait    = true
+
+  # Désactiver les composants non nécessaires pour alléger l'install
+  set {
+    name  = "alertmanager.enabled"
+    value = "false"
+  }
+
+  # Prometheus — scrape automatique des pods annotés
+  set {
+    name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
+    value = "false"
+  }
+  set {
+    name  = "prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues"
+    value = "false"
+  }
+
+  # Grafana — activer avec mot de passe admin
+  set {
+    name  = "grafana.enabled"
+    value = "true"
+  }
+  set {
+    name  = "grafana.adminPassword"
+    value = var.grafana_admin_password
+  }
+
+  depends_on = [module.eks_nodegroup]
+}
+
+# ---- Application TaskManager ----
 # Le déploiement de l'application est géré par le job "deploy" du CI/CD
 # (helm upgrade --install) et non par Terraform.
-# Terraform gère uniquement l'infrastructure (VPC, EKS, RDS, ALB Controller).
+# Terraform gère uniquement l'infrastructure (VPC, EKS, RDS, ALB Controller, Monitoring).

@@ -108,3 +108,10 @@ variable "ghcr_token" {
   type        = string
   sensitive   = true
 }
+
+variable "grafana_admin_password" {
+  description = "Mot de passe administrateur Grafana"
+  type        = string
+  sensitive   = true
+  default     = "Admin1234!"
+}
