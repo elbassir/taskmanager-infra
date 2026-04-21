@@ -266,31 +266,74 @@ resource "helm_release" "prometheus" {
   timeout = 600
   wait    = true
 
-  # Désactiver les composants non nécessaires pour alléger l'install
-  set {
-    name  = "alertmanager.enabled"
-    value = "false"
-  }
+  values = [yamlencode({
+    # ---- AlertManager — désactivé (non nécessaire pour le PFE) ----
+    alertmanager = { enabled = false }
 
-  # Prometheus — scrape automatique des pods annotés
-  set {
-    name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
-    value = "false"
-  }
-  set {
-    name  = "prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues"
-    value = "false"
-  }
+    # ---- Prometheus — scrape automatique des pods annotés ----
+    prometheus = {
+      prometheusSpec = {
+        serviceMonitorSelectorNilUsesHelmValues = false
+        podMonitorSelectorNilUsesHelmValues     = false
+      }
+    }
 
-  # Grafana — activer avec mot de passe admin
-  set {
-    name  = "grafana.enabled"
-    value = "true"
-  }
-  set {
-    name  = "grafana.adminPassword"
-    value = var.grafana_admin_password
-  }
+    # ---- Grafana ----
+    grafana = {
+      enabled       = true
+      adminPassword = var.grafana_admin_password
+
+      # Sidecar — détecte les ConfigMaps avec label grafana_dashboard=1
+      sidecar = {
+        dashboards = { enabled = true }
+      }
+
+      # Dashboards importés automatiquement depuis grafana.com
+      dashboardProviders = {
+        "dashboardproviders.yaml" = {
+          apiVersion = 1
+          providers = [{
+            name            = "default"
+            orgId           = 1
+            folder          = ""
+            type            = "file"
+            disableDeletion = false
+            editable        = true
+            options         = { path = "/var/lib/grafana/dashboards/default" }
+          }]
+        }
+      }
+
+      dashboards = {
+        default = {
+          # JVM Micrometer — métriques Spring Boot (heap, threads, GC)
+          jvm-micrometer = {
+            gnetId     = 4701
+            revision   = 1
+            datasource = "Prometheus"
+          }
+          # Kubernetes Cluster — CPU, mémoire, pods par nœud
+          kubernetes-cluster = {
+            gnetId     = 315
+            revision   = 3
+            datasource = "Prometheus"
+          }
+          # Node Exporter — métriques système des nœuds EC2
+          node-exporter = {
+            gnetId     = 1860
+            revision   = 37
+            datasource = "Prometheus"
+          }
+          # Spring Boot — métriques applicatives détaillées
+          spring-boot = {
+            gnetId     = 19004
+            revision   = 2
+            datasource = "Prometheus"
+          }
+        }
+      }
+    }
+  })]
 
   depends_on = [module.eks_nodegroup]
 }
