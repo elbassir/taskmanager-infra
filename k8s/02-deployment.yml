@@ -1,0 +1,118 @@
+# ============================================================
+# Deployment — TaskManager API
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskmanager
+  namespace: taskmanager
+  labels:
+    app: taskmanager
+    version: '1.0.0'
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: taskmanager
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # Zero-downtime deployment
+  template:
+    metadata:
+      labels:
+        app: taskmanager
+        version: '1.0.0'
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/actuator/prometheus'
+        prometheus.io/port: '8080'
+    spec:
+      # Anti-affinity : les pods ne se retrouvent pas sur le même nœud
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [taskmanager]
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: taskmanager
+          image: ghcr.io/elbassir/taskmanager:latest # ← Remplacer par votre image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+
+          # Variables depuis ConfigMap
+          envFrom:
+            - configMapRef:
+                name: taskmanager-config
+
+          # Variables sensibles depuis Secret
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: taskmanager-db-secret
+                  key: DB_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: taskmanager-db-secret
+                  key: DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskmanager-db-secret
+                  key: DB_PASSWORD
+
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '250m'
+            limits:
+              memory: '512Mi'
+              cpu: '500m'
+
+          # Liveness : le conteneur est-il en vie ?
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          # Readiness : le conteneur est-il prêt à recevoir du trafic ?
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          # Startup : laisse du temps au démarrage de Spring Boot
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            failureThreshold: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+
+      # Graceful shutdown
+      terminationGracePeriodSeconds: 30

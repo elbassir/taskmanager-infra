@@ -1,0 +1,84 @@
+# ============================================================
+# values.yaml — Configuration par défaut du chart TaskManager
+# Surcharger avec : helm install ... -f values-prod.yaml
+# ============================================================
+
+replicaCount: 2
+environment: prod
+
+image:
+  repository: ghcr.io/elbassir/taskmanager
+  pullPolicy: Always
+  tag: 'latest'
+
+imagePullSecrets:
+  - name: ghcr-secret
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: alb
+  host: 'taskmanager.elbassir.com'
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/success-codes: '200'
+    # Coller ici l'ARN issu de : terraform output acm_certificate_arn
+    # Exemple : arn:aws:acm:eu-west-3:729147111326:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:eu-west-3:729147111326:certificate/d5545682-82df-441d-b82e-297bc7a79920'
+
+resources:
+  requests:
+    memory: '256Mi'
+    cpu: '250m'
+  limits:
+    memory: '512Mi'
+    cpu: '500m'
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 45
+    periodSeconds: 15
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 3
+  startup:
+    path: /actuator/health
+    initialDelaySeconds: 20
+    failureThreshold: 15
+    periodSeconds: 5
+    timeoutSeconds: 3
+
+config:
+  springProfiles: prod
+  logLevel: INFO
+
+db:
+  secretName: taskmanager-db-secret
+
+monitoring:
+  prometheus:
+    enabled: true
+    path: /actuator/prometheus
+    port: 8080

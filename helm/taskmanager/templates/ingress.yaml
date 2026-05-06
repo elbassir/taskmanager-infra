@@ -1,0 +1,34 @@
+# ============================================================
+# ingress.yaml — Ingress ALB avec HTTPS et certificat ACM
+# Usage : kubectl apply -f k8s/ingress.yaml
+#     Utiliser uniquement si l'application est déployée via
+#     kubectl (Phase 5). En Phase 6 (Helm), l'Ingress est
+#     géré par helm/taskmanager/templates/deployment.yaml
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskmanager-ingress
+  namespace: taskmanager
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # ARN du certificat ACM — récupérer via : terraform output acm_certificate_arn
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-west-3:729147111326:certificate/d5545682-82df-441d-b82e-297bc7a79920"
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  rules:
+    - host: taskmanager.elbassir.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: taskmanager-svc
+                port:
+                  number: 80
